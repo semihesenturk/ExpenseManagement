@@ -11,4 +11,18 @@
       <ProjectReference Include="..\Expense.Infrastructure\Expense.Infrastructure.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+      <PackageReference Include="FluentValidation" Version="12.1.1" />
+      <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+      <PackageReference Include="MediatR" Version="14.1.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Features\Expenses\Commands\" />
+      <Folder Include="Features\Expenses\Dtos\" />
+      <Folder Include="Features\Expenses\Queries\" />
+      <Folder Include="Features\Tenants\" />
+    </ItemGroup>
+
 </Project>
