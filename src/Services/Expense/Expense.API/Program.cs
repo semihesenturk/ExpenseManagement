@@ -1,6 +1,7 @@
 using System.Text;
 using Expense.Application;
 using Expense.Infrastructure;
+using Expense.Infrastructure.Persistence.SeedData;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -73,5 +74,21 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+//Seed initial data
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        // Namespace'e dikkat: Expense.Infrastructure.Persistence.ExpenseDbContextSeed
+        await ExpenseDbContextSeed.SeedAsync(services);
+        Console.WriteLine("✅ Veritabanı seed işlemi başarıyla tamamlandı.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Seed data oluşturulurken bir hata oluştu: {ex.Message}");
+    }
+}
 
 app.Run();
