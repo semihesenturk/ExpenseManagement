@@ -20,7 +20,7 @@ public class ExpenseRequestRepository : IExpenseRequestRepository
         return expenseRequest;
     }
 
-    public async Task<ExpenseRequest?> GetByIdAsync(Guid id)
+    public async Task<ExpenseRequest?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         => await _context.ExpenseRequests
             .Include(x => x.Approvals)
             .FirstOrDefaultAsync(x => x.Id == id);
@@ -30,8 +30,9 @@ public class ExpenseRequestRepository : IExpenseRequestRepository
             .Where(x => x.RequestedById == requestedById)
             .Include(x => x.Approvals)
             .ToListAsync();
+    
 
-    public async Task UpdateAsync(ExpenseRequest expenseRequest)
+    public async Task UpdateAsync(ExpenseRequest expenseRequest , CancellationToken cancellationToken)
     {
         _context.ExpenseRequests.Update(expenseRequest);
         await _context.SaveChangesAsync();

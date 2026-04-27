@@ -26,6 +26,12 @@ public static class DependencyInjection
         //MassTransit
         services.AddMassTransit(x =>
         {
+            x.AddEntityFrameworkOutbox<ExpenseDbContext>(o =>
+            {
+                o.UsePostgres();
+                o.UseBusOutbox();
+            });
+
             x.UsingRabbitMq((context, cfg) =>
             {
                 cfg.Host("localhost", "/", h =>
@@ -33,7 +39,7 @@ public static class DependencyInjection
                     h.Username("guest");
                     h.Password("guest");
                 });
-        
+                
                 cfg.ConfigureEndpoints(context);
             });
         });

@@ -15,11 +15,11 @@ public class RejectExpenseRequestCommandHandler
 
     public async Task<Unit> Handle(RejectExpenseRequestCommand request, CancellationToken cancellationToken)
     {
-        var expense = await _repository.GetByIdAsync(request.ExpenseRequestId)
+        var expense = await _repository.GetByIdAsync(request.ExpenseRequestId, cancellationToken)
                       ?? throw new KeyNotFoundException("Expense request not found.");
 
         expense.Reject(request.ApproverId, request.Note);
-        await _repository.UpdateAsync(expense);
+        await _repository.UpdateAsync(expense, cancellationToken);
 
         return Unit.Value;
     }

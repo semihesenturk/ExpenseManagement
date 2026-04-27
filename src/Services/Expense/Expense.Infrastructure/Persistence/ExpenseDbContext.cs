@@ -1,6 +1,7 @@
 using Expense.Application.Common.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Expense.Domain.Entities;
+using MassTransit;
 
 public class ExpenseDbContext : DbContext, IExpenseDbContext
 {
@@ -26,6 +27,10 @@ public class ExpenseDbContext : DbContext, IExpenseDbContext
                 !e.IsDeleted && 
                 _tenantService.TenantId.HasValue && 
                 e.TenantId == _tenantService.TenantId.Value); 
+        
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
