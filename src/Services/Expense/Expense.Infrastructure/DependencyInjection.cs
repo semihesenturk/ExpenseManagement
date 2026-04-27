@@ -19,6 +19,8 @@ public static class DependencyInjection
         services.AddDbContext<ExpenseDbContext>(options =>
             options.UseNpgsql(connectionString));
         
+        services.AddScoped<IExpenseDbContext>(provider => provider.GetRequiredService<ExpenseDbContext>());
+        
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<ICurrentTenantService, CurrentTenantService>();

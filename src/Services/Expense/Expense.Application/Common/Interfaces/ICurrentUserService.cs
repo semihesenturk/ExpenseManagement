@@ -3,5 +3,6 @@ namespace Expense.Application.Common.Interfaces;
 public interface ICurrentUserService
 {
     Guid? UserId { get; }
+    Guid? TenantId { get; }
     List<string> Roles { get; }
 }

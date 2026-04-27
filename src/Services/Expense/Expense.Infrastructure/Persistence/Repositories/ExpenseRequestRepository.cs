@@ -21,9 +21,12 @@ public class ExpenseRequestRepository : IExpenseRequestRepository
     }
 
     public async Task<ExpenseRequest?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
-        => await _context.ExpenseRequests
-            .Include(x => x.Approvals)
-            .FirstOrDefaultAsync(x => x.Id == id);
+    {
+        return await _context.ExpenseRequests
+            .AsNoTracking()
+            .Include(x => x.Approvals) 
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    }
 
     public async Task<IEnumerable<ExpenseRequest>> GetByRequestedByIdAsync(Guid requestedById)
         => await _context.ExpenseRequests

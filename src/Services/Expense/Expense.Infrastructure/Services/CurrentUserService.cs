@@ -17,10 +17,22 @@ public class CurrentUserService : ICurrentUserService
     {
         get
         {
-            var claim = _contextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier);
-            var userIdValue = claim?.Value;
+            var claim = _contextAccessor.HttpContext?.User?.Claims
+                .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub" || c.Type == "id");
             
+            var userIdValue = claim?.Value;
             return Guid.TryParse(userIdValue, out var id) ? id : null;
+        }
+    }
+
+    public Guid? TenantId
+    {
+        get
+        {
+            var tenantClaim = _contextAccessor.HttpContext?.User?.Claims
+                .FirstOrDefault(c => c.Type == "TenantId" || c.Type.EndsWith("tenantid"));
+
+            return Guid.TryParse(tenantClaim?.Value, out var id) ? id : null;
         }
     }
     
@@ -32,7 +44,7 @@ public class CurrentUserService : ICurrentUserService
             
             if (claims == null) 
                 return new List<string>();
-
+            
             return claims
                 .Where(c => c.Type == ClaimTypes.Role)
                 .Select(c => c.Value)

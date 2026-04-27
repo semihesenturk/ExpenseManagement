@@ -1,57 +1,63 @@
-using AutoMapper;
 using Expense.Application.Common.Interfaces;
-using Expense.Application.Contracts.Persistence;
 using Expense.Domain.Entities;
+using Shared.Contracts.Events; // Event kontratını ekledik
 using MassTransit;
 using MediatR;
-using Shared.Contracts.Events;
 
 namespace Expense.Application.Features.Expenses.Commands.CreateExpenseRequest;
 
-public class CreateExpenseRequestCommandHandler 
-    : IRequestHandler<CreateExpenseRequestCommand, CreateExpenseRequestDto>
+public class CreateExpenseRequestCommandHandler : IRequestHandler<CreateExpenseRequestCommand, CreateExpenseRequestDto>
 {
-    private readonly IExpenseRequestRepository _repository;
-    private readonly IMapper _mapper;
-    private readonly ICurrentUserService _currentUser;
-    private readonly ICurrentTenantService _currentTenant;
+    private readonly IExpenseDbContext _context;
+    private readonly ICurrentUserService _currentUserService;
     private readonly IPublishEndpoint _publishEndpoint;
 
     public CreateExpenseRequestCommandHandler(
-        IExpenseRequestRepository repository,
-        IMapper mapper,
-        ICurrentUserService currentUser,
-        ICurrentTenantService currentTenant,
+        IExpenseDbContext context, 
+        ICurrentUserService currentUserService,
         IPublishEndpoint publishEndpoint)
     {
-        _repository = repository;
-        _mapper = mapper;
-        _currentUser = currentUser;
-        _currentTenant = currentTenant;
+        _context = context;
+        _currentUserService = currentUserService;
         _publishEndpoint = publishEndpoint;
     }
 
-    public async Task<CreateExpenseRequestDto> Handle(
-        CreateExpenseRequestCommand request,
-        CancellationToken cancellationToken)
+    public async Task<CreateExpenseRequestDto> Handle(CreateExpenseRequestCommand request, CancellationToken cancellationToken)
     {
-        var tenantId = _currentTenant.TenantId.Value;
+        var userId = _currentUserService.UserId;
+        var tenantId = _currentUserService.TenantId;
 
-        var userId = _currentUser.UserId.Value;
+        if (!userId.HasValue || !tenantId.HasValue)
+            throw new UnauthorizedAccessException("Kullanıcı veya Tenant bilgisi bulunamadı.");
 
-        var expense = new ExpenseRequest(tenantId, userId, request.Amount, request.Description);
 
-        expense = await _repository.AddAsync(expense);
+        var entity = new ExpenseRequest(
+            tenantId.Value, 
+            userId.Value, 
+            request.Amount, 
+            request.Description
+        );
         
-        //Throw event for notification service
+        _context.ExpenseRequests.Add(entity);
+        
         await _publishEndpoint.Publish(new ExpenseCreatedEvent
         {
-            ExpenseId = expense.Id,
-            TenantId = tenantId,
-            UserId = userId,
-            Amount = request.Amount
+            ExpenseId = entity.Id,
+            TenantId = tenantId.Value,
+            UserId = userId.Value,
+            Amount = entity.Amount
         }, cancellationToken);
-
-        return _mapper.Map<CreateExpenseRequestDto>(expense);
+        
+        await _context.SaveChangesAsync(cancellationToken);
+        
+        return new CreateExpenseRequestDto
+        {
+            Id = entity.Id,
+            EmployeeId = userId.Value.ToString(),
+            Amount = entity.Amount,
+            Currency = "TRY",
+            Description = entity.Description,
+            RequestDate = entity.RequestDate
+        };
     }
 }

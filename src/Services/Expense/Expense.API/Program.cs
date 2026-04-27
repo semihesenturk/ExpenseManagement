@@ -1,25 +1,33 @@
 using System.Text;
 using Expense.Application;
+using Expense.Application.Common.Interfaces;
 using Expense.Infrastructure;
 using Expense.Infrastructure.Persistence.SeedData;
+using Expense.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//Add layers
+// 1. Katman Kayıtları (Layers)
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Add services to the container.
+// 2. HTTP Context Erişimi (Kritik: ICurrentUserService'in çalışması için şart!)
+builder.Services.AddHttpContextAccessor();
+
+// 3. Kendi Servisimiz (Infrastructure içindeki kaydı ezmemesi için AddInfrastructure'dan SONRA ekledik)
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+// 4. API Servisleri
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-//Add Swagger with JWT Support
+// 5. Swagger Konfigürasyonu (JWT Destekli)
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "ExpenseManagement API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Izometri ExpenseManagement API", Version = "v1" });
     
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -42,7 +50,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-//Add jwt
+// 6. Kimlik Doğrulama ve Yetkilendirme (Auth)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -52,10 +60,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "IzometriSaaS",
-            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "IzometriSaaS",
+            ValidIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "ExpenseAPI",
+            ValidAudience = builder.Configuration["JwtSettings:Audience"] ?? "ExpenseAPI",
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "super-secret-key-for-izometri-case-study-needs-to-be-long"))
+                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"] ?? "IzometriBilisimIcinCokGizliVeUzunBirAnahtarKelime123!!"))
         };
     });
 
@@ -63,25 +71,27 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// 7. Middleware Akışı (Pipeline)
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// ÖNEMLİ: Sıralama Authentication -> Authorization şeklinde olmalı
 app.UseHttpsRedirection();
+
 app.UseAuthentication(); 
 app.UseAuthorization();
 
 app.MapControllers();
 
-//Seed initial data
+// 8. Veritabanı Seed İşlemi
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
-        // Namespace'e dikkat: Expense.Infrastructure.Persistence.ExpenseDbContextSeed
         await ExpenseDbContextSeed.SeedAsync(services);
         Console.WriteLine("✅ Veritabanı seed işlemi başarıyla tamamlandı.");
     }

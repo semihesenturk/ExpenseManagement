@@ -5,11 +5,12 @@ using MassTransit;
 
 public class ExpenseDbContext : DbContext, IExpenseDbContext
 {
-    private readonly ICurrentTenantService _tenantService;
-    public ExpenseDbContext(DbContextOptions<ExpenseDbContext> options, ICurrentTenantService tenantService)
+    private readonly ICurrentUserService _currentUserService;
+
+    public ExpenseDbContext(DbContextOptions<ExpenseDbContext> options, ICurrentUserService currentUserService)
         : base(options)
     {
-        _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
@@ -25,8 +26,8 @@ public class ExpenseDbContext : DbContext, IExpenseDbContext
         modelBuilder.Entity<ExpenseRequest>()
             .HasQueryFilter(e => 
                 !e.IsDeleted && 
-                _tenantService.TenantId.HasValue && 
-                e.TenantId == _tenantService.TenantId.Value); 
+                _currentUserService.TenantId != null &&
+                e.TenantId == _currentUserService.TenantId); 
         
         modelBuilder.AddInboxStateEntity();
         modelBuilder.AddOutboxMessageEntity();
