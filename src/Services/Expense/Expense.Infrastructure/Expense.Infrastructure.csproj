@@ -9,14 +9,19 @@
     <ItemGroup>
       <ProjectReference Include="..\..\..\Shared\Shared.Kernel\Shared.Kernel.csproj" />
       <ProjectReference Include="..\Expense.Domain\Expense.Domain.csproj" />
+      <ProjectReference Include="..\Expense.Application\Expense.Application.csproj" />
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Microsoft.AspNetCore.Authentication.Abstractions" Version="2.3.9" />
+      <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.9" />
+      <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.9" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.15" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.15">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     </ItemGroup>
 

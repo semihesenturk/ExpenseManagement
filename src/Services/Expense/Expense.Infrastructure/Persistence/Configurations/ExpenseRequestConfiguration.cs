@@ -19,6 +19,10 @@ namespace Expense.Infrastructure.Persistence.Configurations
             builder.Property(er => er.Description)
                 .IsRequired()
                 .HasMaxLength(300);
+            
+            builder.Property(er => er.Status)
+                .HasConversion<string>()
+                .IsRequired();
 
             builder.HasMany(er => er.Approvals)
                 .WithOne(a => a.ExpenseRequest)

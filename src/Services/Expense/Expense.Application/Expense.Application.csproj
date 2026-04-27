@@ -8,7 +8,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Expense.Domain\Expense.Domain.csproj" />
-      <ProjectReference Include="..\Expense.Infrastructure\Expense.Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -19,9 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Features\Expenses\Commands\" />
       <Folder Include="Features\Expenses\Dtos\" />
-      <Folder Include="Features\Expenses\Queries\" />
       <Folder Include="Features\Tenants\" />
     </ItemGroup>
 

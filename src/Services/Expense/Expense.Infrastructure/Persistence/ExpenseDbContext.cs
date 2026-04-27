@@ -1,22 +1,19 @@
-using Expense.Domain.Entities;
+using Expense.Application.Common.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Expense.Domain.Entities;
 
-namespace Expense.Infrastructure.Persistence
+public class ExpenseDbContext : DbContext, IExpenseDbContext
 {
-    public class ExpenseDbContext : DbContext
+    public ExpenseDbContext(DbContextOptions<ExpenseDbContext> options)
+        : base(options)
     {
-        public ExpenseDbContext(DbContextOptions<ExpenseDbContext> options)
-            : base(options) { }
-
-        public DbSet<Tenant> Tenants => Set<Tenant>();
-        public DbSet<User> Users => Set<User>();
-        public DbSet<ExpenseRequest> ExpenseRequests => Set<ExpenseRequest>();
-        public DbSet<Approval> Approvals => Set<Approval>();
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.ApplyConfigurationsFromAssembly(typeof(ExpenseDbContext).Assembly);
-            base.OnModelCreating(modelBuilder);
-        }
     }
+
+    public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<ExpenseRequest> ExpenseRequests => Set<ExpenseRequest>();
+    public DbSet<Approval> Approvals => Set<Approval>();
+
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        => await base.SaveChangesAsync(cancellationToken);
 }
