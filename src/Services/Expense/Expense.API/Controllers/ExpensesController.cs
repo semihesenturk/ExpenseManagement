@@ -1,6 +1,6 @@
-using Expense.Application.Common.Interfaces;
 using Expense.Application.Features.Expenses.Commands.RejectExpenseRequest;
 using Expense.Application.Features.Expenses.Commands.CreateExpenseRequest;
+using Expense.Application.Features.Expenses.Commands.ApproveExpenseRequest;
 using Expense.Application.Features.Expenses.Queries.GetExpenseRequests;
 using Expense.Application.Features.Expenses.Queries.GetExpenseRequestById;
 using MediatR;
@@ -15,30 +15,23 @@ namespace Expense.API.Controllers;
 public class ExpensesController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly ICurrentUserService _currentUserService;
 
-    public ExpensesController(IMediator mediator,  ICurrentUserService currentUserService)
+    public ExpensesController(IMediator mediator)
     {
         _mediator = mediator;
-        _currentUserService = currentUserService;
     }
 
     /// <summary>
     /// Yeni harcama talebi oluşturur.
-    /// Tüm roller (Admin, Approver, Employee) harcama girebilir.
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Admin,Approver,Employee")] 
     public async Task<IActionResult> Create([FromBody] CreateExpenseRequestCommand command)
         => Ok(await _mediator.Send(command));
 
     /// <summary>
-    /// Harcamaları listeler. 
-    /// Handler içindeki mantık sayesinde Employee sadece kendininkileri, 
-    /// Admin/Approver ise herkesinkini görür.
+    /// Harcamaları listeler.
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = "Admin,Approver,Employee")]
     public async Task<IActionResult> GetAll([FromQuery] GetExpenseRequestsQuery query)
         => Ok(await _mediator.Send(query));
 
@@ -46,7 +39,6 @@ public class ExpensesController : ControllerBase
     /// Tekil harcama detayı getirir.
     /// </summary>
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = "Admin,Approver,Employee")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var result = await _mediator.Send(new GetExpenseRequestByIdQuery { Id = id });
@@ -54,31 +46,25 @@ public class ExpensesController : ControllerBase
     }
 
     /// <summary>
-    /// Harcamayı onaylar. Sadece yetkili roller yapabilir.
+    /// Harcamayı onaylar. (HR veya Admin yapabilir)
     /// </summary>
     [HttpPost("{id:guid}/approve")]
     [Authorize(Roles = "Admin,Approver")] 
     public async Task<IActionResult> Approve(Guid id, [FromBody] string? note)
     {
-        var command = new ApproveExpenseRequestCommand(id, _currentUserService.UserId.Value, note);
-    
+        var command = new ApproveExpenseRequestCommand(id, note);
         return Ok(await _mediator.Send(command));
     }
 
     /// <summary>
-    /// Harcamayı reddeder. Sadece yetkili roller yapabilir.
+    /// Harcamayı reddeder. (HR veya Admin yapabilir)
     /// </summary>
     [HttpPost("{id:guid}/reject")]
-    [Authorize(Roles = "Admin,Approver")] 
+    [Authorize(Roles = "Admin,HR")]
     public async Task<IActionResult> Reject(Guid id, [FromBody] RejectExpenseRequestCommand command)
     {
-        // Command içindeki ID'leri ve reddeden kişiyi setliyoruz
-        var updatedCommand = command with 
-        { 
-            ExpenseRequestId = id, 
-            ApproverId = _currentUserService.UserId.Value 
-        };
-
+        // Record tipinde 'with' kullanımı harika, sadece ID'yi eşliyoruz
+        var updatedCommand = command with { ExpenseRequestId = id };
         return Ok(await _mediator.Send(updatedCommand));
     }
 }

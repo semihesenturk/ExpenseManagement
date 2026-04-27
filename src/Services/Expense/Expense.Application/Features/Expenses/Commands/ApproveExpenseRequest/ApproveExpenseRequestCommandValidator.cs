@@ -6,7 +6,6 @@ public class ApproveExpenseRequestCommandValidator : AbstractValidator<ApproveEx
 {
     public ApproveExpenseRequestCommandValidator()
     {
-        RuleFor(x => x.ExpenseRequestId).NotEmpty();
-        RuleFor(x => x.ApproverId).NotEmpty();
+        RuleFor(x => x.ExpenseRequestId).NotEmpty().WithMessage("Harcama ID boş olamaz.");
     }
 }

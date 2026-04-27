@@ -37,8 +37,15 @@ public class ExpenseRequestRepository : IExpenseRequestRepository
 
     public async Task UpdateAsync(ExpenseRequest expenseRequest , CancellationToken cancellationToken)
     {
-        _context.ExpenseRequests.Update(expenseRequest);
-        await _context.SaveChangesAsync();
+        var entry = _context.Entry(expenseRequest);
+        if (entry.State == EntityState.Detached)
+        {
+            _context.ExpenseRequests.Attach(expenseRequest);
+        }
+        
+        entry.State = EntityState.Modified;
+        
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task DeleteAsync(Guid id)

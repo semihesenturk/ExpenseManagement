@@ -18,13 +18,15 @@ public class GetExpenseRequestsQueryHandler : IRequestHandler<GetExpenseRequests
 
     public async Task<PaginatedList<GetExpenseRequestsDto>> Handle(GetExpenseRequestsQuery request, CancellationToken cancellationToken)
     {
-
         var query = _context.ExpenseRequests.AsNoTracking();
         
         var userRoles = _currentUser.Roles ?? [];
-        var isPersonnelOnly = !userRoles.Contains("HR") && !userRoles.Contains("Admin");
+        
+        var hasManagerialRole = userRoles.Contains("HR") || 
+                                userRoles.Contains("Admin") || 
+                                userRoles.Contains("Approver");
 
-        if (isPersonnelOnly)
+        if (!hasManagerialRole)
         {
             query = query.Where(x => x.RequestedById == _currentUser.UserId);
         }
@@ -37,9 +39,10 @@ public class GetExpenseRequestsQueryHandler : IRequestHandler<GetExpenseRequests
 
         if (request.EndDate.HasValue)
             query = query.Where(x => x.RequestDate <= request.EndDate.Value);
-
+        
         query = query.OrderByDescending(x => x.RequestDate);
         
+
         var totalCount = await query.CountAsync(cancellationToken);
         
         var items = await query

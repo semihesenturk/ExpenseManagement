@@ -1,6 +1,6 @@
 using Expense.Application.Common.Interfaces;
 using Expense.Domain.Entities;
-using Shared.Contracts.Events; // Event kontratını ekledik
+using Shared.Contracts.Events;
 using MassTransit;
 using MediatR;
 

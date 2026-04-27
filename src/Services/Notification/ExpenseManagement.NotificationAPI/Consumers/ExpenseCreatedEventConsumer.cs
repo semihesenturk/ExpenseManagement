@@ -8,13 +8,16 @@ public class ExpenseCreatedEventConsumer : IConsumer<ExpenseCreatedEvent>
 {
     private readonly ILogger<ExpenseCreatedEventConsumer> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IConfiguration _configuration;
 
     public ExpenseCreatedEventConsumer(
         ILogger<ExpenseCreatedEventConsumer> logger,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory, 
+        IConfiguration configuration)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
+        _configuration = configuration;
     }
 
     public async Task Consume(ConsumeContext<ExpenseCreatedEvent> context)
@@ -26,8 +29,10 @@ public class ExpenseCreatedEventConsumer : IConsumer<ExpenseCreatedEvent>
             _logger.LogInformation("⏳ [Tenant: {TenantId}] {ExpenseId} ID'li harcama yakalandı. Detaylar Expense API'den çekiliyor...", message.TenantId, message.ExpenseId);
 
             // TR-7: Senkron HTTP Çağrısı
+            var token = _configuration["TestToken"];
+            
             var client = _httpClientFactory.CreateClient("ExpenseApiClient");
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6ImRkYmVjNTIxLTk1NjYtNDAzYS05NGYzLTJiNGJhZmIwYmFhZSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6ImVtcGxveWVlQGl6b21ldHJpLmxvY2FsIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiRW1wbG95ZWUiLCJUZW5hbnRJZCI6IjZkYzI5YzNjLWQ5NDUtNGY0MC05YWNjLWNmNDQ3ZGE1ZWI5OCIsImV4cCI6MTc3NzMwNDY0OSwiaXNzIjoiRXhwZW5zZUFQSSIsImF1ZCI6IkV4cGVuc2VBUEkifQ.1KNhctdjkvM2HFfb1TqiaPorVRg_XS1AcG_rgGoVUdY");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             var response = await client.GetAsync($"Expenses/{message.ExpenseId}");
             
             if (response.IsSuccessStatusCode)

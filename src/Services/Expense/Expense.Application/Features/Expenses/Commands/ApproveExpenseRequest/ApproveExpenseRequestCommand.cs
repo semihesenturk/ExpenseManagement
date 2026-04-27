@@ -1,4 +1,6 @@
 using MediatR;
 
-public record ApproveExpenseRequestCommand(Guid ExpenseRequestId, Guid ApproverId, string? Note = null)
+namespace Expense.Application.Features.Expenses.Commands.ApproveExpenseRequest;
+
+public record ApproveExpenseRequestCommand(Guid ExpenseRequestId, string? Note = null) 
     : IRequest<Unit>;
