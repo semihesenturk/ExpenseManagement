@@ -2,8 +2,10 @@ namespace Expense.Domain.Enums
 {
     public enum ExpenseStatus
     {
-        Pending = 1,
-        Approved = 2,
-        Rejected = 3
+        Draft = 1,
+        Pending = 2,
+        PendingAdminApproval = 3,
+        Approved = 4,
+        Rejected = 5
     }
 }

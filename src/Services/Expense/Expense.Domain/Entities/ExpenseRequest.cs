@@ -52,5 +52,15 @@ namespace Expense.Domain.Entities
             var approval = new Approval(Id, approverId, status, note);
             _approvals.Add(approval);
         }
+        
+        public void SendToAdminApproval(Guid approverId, string? note = null)
+        {
+            if (Status != ExpenseStatus.Pending)
+                throw new InvalidOperationException("Request is not in pending state.");
+
+            Status = ExpenseStatus.PendingAdminApproval;
+            AddApproval(approverId, ApprovalStatus.Approved, note);
+            MarkAsUpdated();
+        }
     }
 }
