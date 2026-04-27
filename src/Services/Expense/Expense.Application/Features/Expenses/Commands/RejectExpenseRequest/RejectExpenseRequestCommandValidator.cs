@@ -7,6 +7,5 @@ public class RejectExpenseRequestCommandValidator : AbstractValidator<RejectExpe
     public RejectExpenseRequestCommandValidator()
     {
         RuleFor(x => x.ExpenseRequestId).NotEmpty();
-        RuleFor(x => x.ApproverId).NotEmpty();
     }
 }

@@ -57,14 +57,13 @@ public class ExpensesController : ControllerBase
     }
 
     /// <summary>
-    /// Harcamayı reddeder. (HR veya Admin yapabilir)
+    /// Harcamayı reddeder.
     /// </summary>
     [HttpPost("{id:guid}/reject")]
-    [Authorize(Roles = "Admin,HR")]
-    public async Task<IActionResult> Reject(Guid id, [FromBody] RejectExpenseRequestCommand command)
+    [Authorize(Roles = "Admin,HR,Approver")]
+    public async Task<IActionResult> Reject(Guid id, [FromBody] string? note)
     {
-        // Record tipinde 'with' kullanımı harika, sadece ID'yi eşliyoruz
-        var updatedCommand = command with { ExpenseRequestId = id };
-        return Ok(await _mediator.Send(updatedCommand));
+        var command = new RejectExpenseRequestCommand(id, note);
+        return Ok(await _mediator.Send(command));
     }
 }
