@@ -1,3 +1,4 @@
+using AutoMapper;
 using MediatR;
 using Expense.Application.Common.Interfaces;
 using Expense.Application.Common.Models;
@@ -5,24 +6,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Expense.Application.Features.Expenses.Queries.GetExpenseRequests;
 
-public class GetExpenseRequestsQueryHandler(IExpenseDbContext context, ICurrentUserService currentUser)
+public class GetExpenseRequestsQueryHandler(
+    IExpenseDbContext context,
+    ICurrentUserService currentUser,
+    IMapper mapper)
     : IRequestHandler<GetExpenseRequestsQuery, PaginatedList<GetExpenseRequestsDto>>
 {
-    public async Task<PaginatedList<GetExpenseRequestsDto>> Handle(GetExpenseRequestsQuery request, CancellationToken cancellationToken)
+    public async Task<PaginatedList<GetExpenseRequestsDto>> Handle(
+        GetExpenseRequestsQuery request, CancellationToken cancellationToken)
     {
         var query = context.ExpenseRequests.AsNoTracking();
-        
+
         var userRoles = currentUser.Roles ?? [];
-        
-        var hasManagerialRole = userRoles.Contains("HR") || 
-                                userRoles.Contains("Admin") || 
+        var hasManagerialRole = userRoles.Contains("HR") ||
+                                userRoles.Contains("Admin") ||
                                 userRoles.Contains("Approver");
 
         if (!hasManagerialRole)
-        {
             query = query.Where(x => x.RequestedById == currentUser.UserId);
-        }
-        
+
         if (request.Status.HasValue)
             query = query.Where(x => x.Status == request.Status.Value);
 
@@ -31,24 +33,17 @@ public class GetExpenseRequestsQueryHandler(IExpenseDbContext context, ICurrentU
 
         if (request.EndDate.HasValue)
             query = query.Where(x => x.RequestDate <= request.EndDate.Value);
-        
+
         query = query.OrderByDescending(x => x.RequestDate);
-        
 
         var totalCount = await query.CountAsync(cancellationToken);
-        
-        var items = await query
+
+        var entities = await query
             .Skip((request.PageNumber - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(x => new GetExpenseRequestsDto
-            {
-                Id = x.Id,
-                Amount = x.Amount,
-                Description = x.Description,
-                Status = x.Status.ToString(),
-                RequestDate = x.RequestDate
-            })
             .ToListAsync(cancellationToken);
+        
+        var items = mapper.Map<List<GetExpenseRequestsDto>>(entities);
 
         return new PaginatedList<GetExpenseRequestsDto>(items, totalCount, request.PageNumber, request.PageSize);
     }

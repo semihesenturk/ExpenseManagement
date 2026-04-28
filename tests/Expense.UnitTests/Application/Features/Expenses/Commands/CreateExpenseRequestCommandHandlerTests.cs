@@ -1,3 +1,4 @@
+using AutoMapper;
 using Expense.Application.Common.Interfaces;
 using Expense.Application.Features.Expenses.Commands.CreateExpenseRequest;
 using Expense.Domain.Entities;
@@ -16,6 +17,7 @@ public class CreateExpenseRequestCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ICurrentUserService> _currentUserServiceMock;
     private readonly Mock<IPublishEndpoint> _publishEndpointMock;
+    private readonly Mock<IMapper> _mapperMock;
     private readonly CreateExpenseRequestCommandHandler _handler;
 
     public CreateExpenseRequestCommandHandlerTests()
@@ -24,6 +26,7 @@ public class CreateExpenseRequestCommandHandlerTests
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _currentUserServiceMock = new Mock<ICurrentUserService>();
         _publishEndpointMock = new Mock<IPublishEndpoint>();
+        _mapperMock = new Mock<IMapper>();
 
         var dbSetMock = new Mock<DbSet<ExpenseRequest>>();
         _contextMock.Setup(x => x.ExpenseRequests).Returns(dbSetMock.Object);
@@ -32,7 +35,8 @@ public class CreateExpenseRequestCommandHandlerTests
             _contextMock.Object,
             _unitOfWorkMock.Object,
             _currentUserServiceMock.Object,
-            _publishEndpointMock.Object);
+            _publishEndpointMock.Object,
+            _mapperMock.Object);
     }
 
     [Fact]
@@ -43,6 +47,10 @@ public class CreateExpenseRequestCommandHandlerTests
 
         _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
         _currentUserServiceMock.Setup(x => x.TenantId).Returns(tenantId);
+
+        var expectedDto = new CreateExpenseRequestDto { Amount = 3000, Currency = "TRY", Category = "Travel" };
+        _mapperMock.Setup(x => x.Map<CreateExpenseRequestDto>(It.IsAny<ExpenseRequest>()))
+            .Returns(expectedDto);
 
         var command = new CreateExpenseRequestCommand
         {
@@ -56,7 +64,6 @@ public class CreateExpenseRequestCommandHandlerTests
 
         result.Should().NotBeNull();
         result.Amount.Should().Be(3000);
-
         _contextMock.Verify(x => x.ExpenseRequests.Add(It.IsAny<ExpenseRequest>()), Times.Once);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _publishEndpointMock.Verify(x => x.Publish(It.IsAny<ExpenseCreatedEvent>(), It.IsAny<CancellationToken>()), Times.Once);

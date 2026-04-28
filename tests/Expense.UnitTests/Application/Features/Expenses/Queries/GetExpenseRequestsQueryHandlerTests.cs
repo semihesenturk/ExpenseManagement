@@ -1,3 +1,4 @@
+using AutoMapper;
 using Expense.Application.Common.Interfaces;
 using Expense.Application.Features.Expenses.Queries.GetExpenseRequests;
 using Expense.Domain.Entities;
@@ -12,15 +13,19 @@ public class GetExpenseRequestsQueryHandlerTests
 {
     private readonly Mock<IExpenseDbContext> _contextMock;
     private readonly Mock<ICurrentUserService> _currentUserServiceMock;
+    private readonly Mock<IMapper> _mapperMock;
     private readonly GetExpenseRequestsQueryHandler _handler;
 
     public GetExpenseRequestsQueryHandlerTests()
     {
         _contextMock = new Mock<IExpenseDbContext>();
         _currentUserServiceMock = new Mock<ICurrentUserService>();
+        _mapperMock = new Mock<IMapper>();
+
         _handler = new GetExpenseRequestsQueryHandler(
             _contextMock.Object,
-            _currentUserServiceMock.Object);
+            _currentUserServiceMock.Object,
+            _mapperMock.Object);
     }
 
     private static ExpenseRequest CreateExpense(Guid tenantId, Guid userId, decimal amount = 1000m)
@@ -31,7 +36,6 @@ public class GetExpenseRequestsQueryHandlerTests
     [Fact]
     public async Task Handle_WhenUserIsEmployee_ShouldReturnOnlyOwnExpenses()
     {
-        // Arrange — Employee sadece kendi harcamasını görmeli
         var tenantId = Guid.NewGuid();
         var myUserId = Guid.NewGuid();
         var otherUserId = Guid.NewGuid();
@@ -47,12 +51,14 @@ public class GetExpenseRequestsQueryHandlerTests
         _currentUserServiceMock.Setup(x => x.UserId).Returns(myUserId);
         _currentUserServiceMock.Setup(x => x.Roles).Returns(new List<string> { "Employee" });
 
+        _mapperMock.Setup(x => x.Map<List<GetExpenseRequestsDto>>(It.IsAny<List<ExpenseRequest>>()))
+            .Returns((List<ExpenseRequest> src) =>
+                src.Select(e => new GetExpenseRequestsDto { Id = e.Id, Amount = e.Amount }).ToList());
+
         var query = new GetExpenseRequestsQuery { PageNumber = 1, PageSize = 10 };
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.Should().NotBeNull();
         result.TotalCount.Should().Be(1);
         result.Items.Should().HaveCount(1);
@@ -61,7 +67,6 @@ public class GetExpenseRequestsQueryHandlerTests
     [Fact]
     public async Task Handle_WhenUserIsHR_ShouldReturnAllExpensesInTenant()
     {
-        // Arrange — HR tüm tenant harcamalarını görmeli
         var tenantId = Guid.NewGuid();
         var myUserId = Guid.NewGuid();
         var otherUserId = Guid.NewGuid();
@@ -77,12 +82,14 @@ public class GetExpenseRequestsQueryHandlerTests
         _currentUserServiceMock.Setup(x => x.UserId).Returns(myUserId);
         _currentUserServiceMock.Setup(x => x.Roles).Returns(new List<string> { "HR" });
 
+        _mapperMock.Setup(x => x.Map<List<GetExpenseRequestsDto>>(It.IsAny<List<ExpenseRequest>>()))
+            .Returns((List<ExpenseRequest> src) =>
+                src.Select(e => new GetExpenseRequestsDto { Id = e.Id, Amount = e.Amount }).ToList());
+
         var query = new GetExpenseRequestsQuery { PageNumber = 1, PageSize = 10 };
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.Should().NotBeNull();
         result.TotalCount.Should().Be(2);
         result.Items.Should().HaveCount(2);
@@ -91,7 +98,6 @@ public class GetExpenseRequestsQueryHandlerTests
     [Fact]
     public async Task Handle_WithPagination_ShouldReturnCorrectPage()
     {
-        // Arrange — 3 kayıt var, 2'si isteniyor
         var tenantId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
@@ -107,12 +113,14 @@ public class GetExpenseRequestsQueryHandlerTests
         _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
         _currentUserServiceMock.Setup(x => x.Roles).Returns(new List<string> { "HR" });
 
+        _mapperMock.Setup(x => x.Map<List<GetExpenseRequestsDto>>(It.IsAny<List<ExpenseRequest>>()))
+            .Returns((List<ExpenseRequest> src) =>
+                src.Select(e => new GetExpenseRequestsDto { Id = e.Id, Amount = e.Amount }).ToList());
+
         var query = new GetExpenseRequestsQuery { PageNumber = 1, PageSize = 2 };
 
-        // Act
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.TotalCount.Should().Be(3);
         result.Items.Should().HaveCount(2);
     }
@@ -120,7 +128,6 @@ public class GetExpenseRequestsQueryHandlerTests
     [Fact]
     public async Task Handle_WithStatusFilter_ShouldReturnOnlyMatchingExpenses()
     {
-        // Arrange — sadece Pending olanlar filtrelenmeli
         var tenantId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
@@ -135,17 +142,19 @@ public class GetExpenseRequestsQueryHandlerTests
         _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
         _currentUserServiceMock.Setup(x => x.Roles).Returns(new List<string> { "HR" });
 
-        var query = new GetExpenseRequestsQuery
-        {
-            PageNumber = 1,
-            PageSize = 10,
-            Status = ExpenseStatus.Pending
-        };
+        _mapperMock.Setup(x => x.Map<List<GetExpenseRequestsDto>>(It.IsAny<List<ExpenseRequest>>()))
+            .Returns((List<ExpenseRequest> src) =>
+                src.Select(e => new GetExpenseRequestsDto
+                {
+                    Id = e.Id,
+                    Amount = e.Amount,
+                    Status = e.Status.ToString()
+                }).ToList());
 
-        // Act
+        var query = new GetExpenseRequestsQuery { PageNumber = 1, PageSize = 10, Status = ExpenseStatus.Pending };
+
         var result = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
         result.TotalCount.Should().Be(1);
         result.Items.First().Status.Should().Be("Pending");
     }
