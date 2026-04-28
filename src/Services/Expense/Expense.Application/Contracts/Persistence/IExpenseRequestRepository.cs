@@ -8,5 +8,5 @@ public interface IExpenseRequestRepository
     Task<ExpenseRequest?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<IEnumerable<ExpenseRequest>> GetByRequestedByIdAsync(Guid requestedById);
     Task UpdateAsync(ExpenseRequest expenseRequest, CancellationToken cancellationToken);
-    Task DeleteAsync(Guid id);
+    Task DeleteAsync(Guid id, Guid deletedBy);
 }

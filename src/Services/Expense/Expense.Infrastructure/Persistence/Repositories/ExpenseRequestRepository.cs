@@ -44,16 +44,14 @@ public class ExpenseRequestRepository : IExpenseRequestRepository
         }
         
         entry.State = EntityState.Modified;
-        
-        await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task DeleteAsync(Guid id)
+    public async Task DeleteAsync(Guid id, Guid deletedBy)
     {
         var entity = await _context.ExpenseRequests.FindAsync(id);
         if (entity is null) return;
 
-        _context.ExpenseRequests.Remove(entity);
+        entity.SoftDelete(deletedBy);
         await _context.SaveChangesAsync();
     }
 }

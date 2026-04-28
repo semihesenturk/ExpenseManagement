@@ -27,7 +27,9 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
 
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Email == request.Email && !u.IsDeleted);
 
         if (user == null)
             return Unauthorized("Sistemde böyle bir kullanıcı bulunamadı.");

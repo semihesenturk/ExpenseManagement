@@ -9,6 +9,8 @@ namespace Expense.Domain.Entities
         public Guid RequestedById { get; private set; }
         public decimal Amount { get; private set; }
         public string Description { get; private set; }
+        public ExpenseCategory Category { get; private set; }
+        public Currency Currency { get; private set; }
         public DateTime RequestDate { get; private set; } = DateTime.UtcNow;
         public ExpenseStatus Status { get; private set; } = ExpenseStatus.Pending;
 
@@ -19,12 +21,14 @@ namespace Expense.Domain.Entities
 
         private ExpenseRequest() { } // EF Core için
 
-        public ExpenseRequest(Guid tenantId, Guid requestedById, decimal amount, string description)
+        public ExpenseRequest(Guid tenantId, Guid requestedById, decimal amount, string description, ExpenseCategory category, Currency currency)
         {
             TenantId = tenantId;
             RequestedById = requestedById;
             Amount = amount;
             Description = description;
+            Category = category;
+            Currency = currency;
         }
 
         public void Approve(Guid approverId, string? note = null)

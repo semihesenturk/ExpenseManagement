@@ -1,5 +1,6 @@
 using Expense.Application.Common.Interfaces;
 using Expense.Application.Contracts.Persistence;
+using Expense.Infrastructure.Persistence;
 using Expense.Infrastructure.Persistence.Repositories;
 using Expense.Infrastructure.Services;
 using MassTransit;
@@ -23,7 +24,6 @@ public static class DependencyInjection
         
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
-        services.AddScoped<ICurrentTenantService, CurrentTenantService>();
         
         //MassTransit
         services.AddMassTransit(x =>
@@ -48,6 +48,9 @@ public static class DependencyInjection
 
         // Repositories
         services.AddScoped<IExpenseRequestRepository, ExpenseRequestRepository>();
+        
+        //UoW
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }

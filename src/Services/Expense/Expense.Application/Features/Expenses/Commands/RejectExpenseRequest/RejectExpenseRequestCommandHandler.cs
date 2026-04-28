@@ -9,15 +9,18 @@ namespace Expense.Application.Features.Expenses.Commands.RejectExpenseRequest;
 public class RejectExpenseRequestCommandHandler : IRequestHandler<RejectExpenseRequestCommand, Unit>
 {
     private readonly IExpenseRequestRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IPublishEndpoint _publishEndpoint;
 
     public RejectExpenseRequestCommandHandler(
         IExpenseRequestRepository repository, 
+        IUnitOfWork unitOfWork,
         ICurrentUserService currentUser, 
         IPublishEndpoint publishEndpoint)
     {
         _repository = repository;
+        _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _publishEndpoint = publishEndpoint;
     }
@@ -49,6 +52,7 @@ public class RejectExpenseRequestCommandHandler : IRequestHandler<RejectExpenseR
         }, cancellationToken);
         
         await _repository.UpdateAsync(expense, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;
     }

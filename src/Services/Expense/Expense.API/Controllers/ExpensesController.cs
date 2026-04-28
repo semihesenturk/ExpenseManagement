@@ -49,7 +49,7 @@ public class ExpensesController : ControllerBase
     /// Harcamayı onaylar. (HR veya Admin yapabilir)
     /// </summary>
     [HttpPost("{id:guid}/approve")]
-    [Authorize(Roles = "Admin,Approver")] 
+    [Authorize(Roles = "HR,Admin,Approver")]
     public async Task<IActionResult> Approve(Guid id, [FromBody] string? note)
     {
         var command = new ApproveExpenseRequestCommand(id, note);

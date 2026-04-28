@@ -10,16 +10,13 @@ public class LoggingBehavior<TRequest, TResponse>
 {
     private readonly ILogger<LoggingBehavior<TRequest, TResponse>> _logger;
     private readonly ICurrentUserService _currentUser;
-    private readonly ICurrentTenantService _currentTenant;
 
     public LoggingBehavior(
         ILogger<LoggingBehavior<TRequest, TResponse>> logger,
-        ICurrentUserService currentUser,
-        ICurrentTenantService currentTenant)
+        ICurrentUserService currentUser)
     {
         _logger = logger;
         _currentUser = currentUser;
-        _currentTenant = currentTenant;
     }
 
     public async Task<TResponse> Handle(
@@ -29,7 +26,7 @@ public class LoggingBehavior<TRequest, TResponse>
     {
         var requestName = typeof(TRequest).Name;
         var user = _currentUser.UserId?.ToString() ?? "Anonymous";
-        var tenant = _currentTenant.TenantId?.ToString() ?? "NoTenant";
+        var tenant = _currentUser.TenantId?.ToString() ?? "NoTenant";
 
         _logger.LogInformation("Handling {RequestName} | Tenant: {TenantId} | User: {UserId} | Payload: {Payload}",
             requestName, tenant, user, JsonSerializer.Serialize(request));

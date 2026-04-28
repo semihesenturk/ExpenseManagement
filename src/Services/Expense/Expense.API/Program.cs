@@ -102,13 +102,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-if (!builder.Environment.IsEnvironment("Testing"))
-{
-    // Gerçek PostgreSQL kaydı sadece "Testing" ortamında DEĞİLSE çalışacak
-    builder.Services.AddDbContext<ExpenseDbContext>(options =>
-        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-}
-
 app.Run();
 
 //For integration tests

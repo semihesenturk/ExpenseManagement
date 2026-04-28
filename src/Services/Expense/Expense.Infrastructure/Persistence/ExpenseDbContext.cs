@@ -29,6 +29,12 @@ public class ExpenseDbContext : DbContext, IExpenseDbContext
                 _currentUserService.TenantId != null &&
                 e.TenantId == _currentUserService.TenantId); 
         
+        modelBuilder.Entity<User>()
+            .HasQueryFilter(u => 
+                !u.IsDeleted &&
+                _currentUserService.TenantId != null &&
+                u.TenantId == _currentUserService.TenantId);
+        
         modelBuilder.AddInboxStateEntity();
         modelBuilder.AddOutboxMessageEntity();
         modelBuilder.AddOutboxStateEntity();
