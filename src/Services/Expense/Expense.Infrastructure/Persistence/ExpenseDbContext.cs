@@ -1,18 +1,13 @@
 using Expense.Application.Common.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using Expense.Domain.Entities;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 
-public class ExpenseDbContext : DbContext, IExpenseDbContext
+namespace Expense.Infrastructure.Persistence;
+
+public class ExpenseDbContext(DbContextOptions<ExpenseDbContext> options, ICurrentUserService currentUserService)
+    : DbContext(options), IExpenseDbContext
 {
-    private readonly ICurrentUserService _currentUserService;
-
-    public ExpenseDbContext(DbContextOptions<ExpenseDbContext> options, ICurrentUserService currentUserService)
-        : base(options)
-    {
-        _currentUserService = currentUserService;
-    }
-
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
     public DbSet<ExpenseRequest> ExpenseRequests => Set<ExpenseRequest>();
@@ -26,14 +21,20 @@ public class ExpenseDbContext : DbContext, IExpenseDbContext
         modelBuilder.Entity<ExpenseRequest>()
             .HasQueryFilter(e => 
                 !e.IsDeleted && 
-                _currentUserService.TenantId != null &&
-                e.TenantId == _currentUserService.TenantId); 
+                currentUserService.TenantId != null &&
+                e.TenantId == currentUserService.TenantId); 
         
         modelBuilder.Entity<User>()
             .HasQueryFilter(u => 
                 !u.IsDeleted &&
-                _currentUserService.TenantId != null &&
-                u.TenantId == _currentUserService.TenantId);
+                currentUserService.TenantId != null &&
+                u.TenantId == currentUserService.TenantId);
+        
+        modelBuilder.Entity<Approval>()
+            .HasQueryFilter(a => 
+                !a.IsDeleted &&
+                currentUserService.TenantId != null &&
+                a.ExpenseRequest!.TenantId == currentUserService.TenantId);
         
         modelBuilder.AddInboxStateEntity();
         modelBuilder.AddOutboxMessageEntity();

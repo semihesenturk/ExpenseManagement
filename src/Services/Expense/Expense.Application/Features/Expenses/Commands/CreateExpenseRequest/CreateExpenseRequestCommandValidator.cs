@@ -1,6 +1,6 @@
-using Expense.Application.Features.Expenses.Commands.CreateExpenseRequest;
-using Expense.Domain.Enums;
 using FluentValidation;
+
+namespace Expense.Application.Features.Expenses.Commands.CreateExpenseRequest;
 
 public class CreateExpenseRequestCommandValidator : AbstractValidator<CreateExpenseRequestCommand>
 {

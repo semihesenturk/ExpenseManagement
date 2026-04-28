@@ -4,20 +4,13 @@ using Expense.Application.Common.Interfaces;
 
 namespace Expense.Infrastructure.Services;
 
-public class CurrentUserService : ICurrentUserService
+public class CurrentUserService(IHttpContextAccessor contextAccessor) : ICurrentUserService
 {
-    private readonly IHttpContextAccessor _contextAccessor;
-
-    public CurrentUserService(IHttpContextAccessor contextAccessor)
-    {
-        _contextAccessor = contextAccessor;
-    }
-
     public Guid? UserId
     {
         get
         {
-            var claim = _contextAccessor.HttpContext?.User?.Claims
+            var claim = contextAccessor.HttpContext?.User?.Claims
                 .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub" || c.Type == "id");
             
             var userIdValue = claim?.Value;
@@ -29,7 +22,7 @@ public class CurrentUserService : ICurrentUserService
     {
         get
         {
-            var tenantClaim = _contextAccessor.HttpContext?.User?.Claims
+            var tenantClaim = contextAccessor.HttpContext?.User?.Claims
                 .FirstOrDefault(c => c.Type == "TenantId" || c.Type.EndsWith("tenantid"));
 
             return Guid.TryParse(tenantClaim?.Value, out var id) ? id : null;
@@ -40,7 +33,7 @@ public class CurrentUserService : ICurrentUserService
     {
         get
         {
-            var claims = _contextAccessor.HttpContext?.User?.Claims;
+            var claims = contextAccessor.HttpContext?.User?.Claims;
             
             if (claims == null) 
                 return new List<string>();

@@ -4,32 +4,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Expense.Infrastructure.Persistence.Repositories;
 
-public class ExpenseRequestRepository : IExpenseRequestRepository
+public class ExpenseRequestRepository(ExpenseDbContext context) : IExpenseRequestRepository
 {
-    private readonly ExpenseDbContext _context;
-
-    public ExpenseRequestRepository(ExpenseDbContext context)
-    {
-        _context = context;
-    }
-
     public async Task<ExpenseRequest> AddAsync(ExpenseRequest expenseRequest)
     {
-        await _context.ExpenseRequests.AddAsync(expenseRequest);
-        await _context.SaveChangesAsync();
+        await context.ExpenseRequests.AddAsync(expenseRequest);
+        await context.SaveChangesAsync();
         return expenseRequest;
     }
 
     public async Task<ExpenseRequest?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        return await _context.ExpenseRequests
+        return await context.ExpenseRequests
             .AsNoTracking()
             .Include(x => x.Approvals) 
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
     public async Task<IEnumerable<ExpenseRequest>> GetByRequestedByIdAsync(Guid requestedById)
-        => await _context.ExpenseRequests
+        => await context.ExpenseRequests
             .Where(x => x.RequestedById == requestedById)
             .Include(x => x.Approvals)
             .ToListAsync();
@@ -37,10 +30,10 @@ public class ExpenseRequestRepository : IExpenseRequestRepository
 
     public async Task UpdateAsync(ExpenseRequest expenseRequest , CancellationToken cancellationToken)
     {
-        var entry = _context.Entry(expenseRequest);
+        var entry = context.Entry(expenseRequest);
         if (entry.State == EntityState.Detached)
         {
-            _context.ExpenseRequests.Attach(expenseRequest);
+            context.ExpenseRequests.Attach(expenseRequest);
         }
         
         entry.State = EntityState.Modified;
@@ -48,10 +41,10 @@ public class ExpenseRequestRepository : IExpenseRequestRepository
 
     public async Task DeleteAsync(Guid id, Guid deletedBy)
     {
-        var entity = await _context.ExpenseRequests.FindAsync(id);
+        var entity = await context.ExpenseRequests.FindAsync(id);
         if (entity is null) return;
 
         entity.SoftDelete(deletedBy);
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 }

@@ -1,3 +1,6 @@
 .idea/
 bin/
 obj/
+*.DotSettings.user
+*.user
+.DS_Store

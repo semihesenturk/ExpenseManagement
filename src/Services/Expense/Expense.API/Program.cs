@@ -5,7 +5,6 @@ using Expense.Infrastructure;
 using Expense.Infrastructure.Persistence.SeedData;
 using Expense.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -13,19 +12,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Katman Kayıtları (Layers)
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddInfrastructure(builder.Configuration);
+}
 
-// 2. HTTP Context Erişimi (Kritik: ICurrentUserService'in çalışması için şart!)
 builder.Services.AddHttpContextAccessor();
-
-// 3. Kendi Servisimiz (Infrastructure içindeki kaydı ezmemesi için AddInfrastructure'dan SONRA ekledik)
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-// 4. API Servisleri
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// 5. Swagger Konfigürasyonu (JWT Destekli)
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Izometri ExpenseManagement API", Version = "v1" });
@@ -51,7 +48,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// 6. Kimlik Doğrulama ve Yetkilendirme (Auth)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -72,13 +68,11 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// 7. Middleware Akışı (Pipeline)
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
 
 app.UseHttpsRedirection();
 
@@ -87,7 +81,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// 8. Veritabanı Seed İşlemi
+//Seed Data
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;

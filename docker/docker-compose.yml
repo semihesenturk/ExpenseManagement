@@ -34,5 +34,38 @@ services:
       - "5672:5672"
       - "15672:15672"
 
+  expense-api:
+    build:
+      context: ..
+      dockerfile: src/Services/Expense/Expense.API/Dockerfile
+    container_name: expense_api
+    restart: always
+    ports:
+      - "5130:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=expense_postgres;Database=expense_db;Username=postgres;Password=postgres
+      - JwtSettings__SecretKey=IzometriBilisimIcinCokGizliVeUzunBirAnahtarKelime123!!
+      - JwtSettings__Issuer=ExpenseAPI
+      - JwtSettings__Audience=ExpenseAPI
+    depends_on:
+      - expense_postgres
+      - rabbitmq
+
+  notification-api:
+    build:
+      context: ..
+      dockerfile: src/Services/Notification/ExpenseManagement.NotificationAPI/Dockerfile
+    container_name: notification_api
+    restart: always
+    ports:
+      - "5051:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - RabbitMq__Host=rabbitmq
+    depends_on:
+      - rabbitmq
+      - expense-api
+
 volumes:
   pgdata:

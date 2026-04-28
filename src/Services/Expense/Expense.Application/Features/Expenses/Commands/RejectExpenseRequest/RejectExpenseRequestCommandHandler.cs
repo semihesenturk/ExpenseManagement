@@ -6,32 +6,20 @@ using Shared.Contracts.Events;
 
 namespace Expense.Application.Features.Expenses.Commands.RejectExpenseRequest;
 
-public class RejectExpenseRequestCommandHandler : IRequestHandler<RejectExpenseRequestCommand, Unit>
+public class RejectExpenseRequestCommandHandler(
+    IExpenseRequestRepository repository,
+    IUnitOfWork unitOfWork,
+    ICurrentUserService currentUser,
+    IPublishEndpoint publishEndpoint)
+    : IRequestHandler<RejectExpenseRequestCommand, Unit>
 {
-    private readonly IExpenseRequestRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ICurrentUserService _currentUser;
-    private readonly IPublishEndpoint _publishEndpoint;
-
-    public RejectExpenseRequestCommandHandler(
-        IExpenseRequestRepository repository, 
-        IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser, 
-        IPublishEndpoint publishEndpoint)
-    {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _currentUser = currentUser;
-        _publishEndpoint = publishEndpoint;
-    }
-
     public async Task<Unit> Handle(RejectExpenseRequestCommand request, CancellationToken cancellationToken)
     {
-        var currentUserId = _currentUser.UserId ?? throw new UnauthorizedAccessException("Kullanıcı kimliği bulunamadı.");
-        var currentTenantId = _currentUser.TenantId;
-        var userRoles = _currentUser.Roles ?? [];
+        var currentUserId = currentUser.UserId ?? throw new UnauthorizedAccessException("Kullanıcı kimliği bulunamadı.");
+        var currentTenantId = currentUser.TenantId;
+        var userRoles = currentUser.Roles ?? [];
         
-        var expense = await _repository.GetByIdAsync(request.ExpenseRequestId, cancellationToken)
+        var expense = await repository.GetByIdAsync(request.ExpenseRequestId, cancellationToken)
                       ?? throw new KeyNotFoundException("Harcama talebi bulunamadı.");
         
         if (expense.TenantId != currentTenantId)
@@ -43,7 +31,7 @@ public class RejectExpenseRequestCommandHandler : IRequestHandler<RejectExpenseR
 
         expense.Reject(currentUserId, request.Note);
         
-        await _publishEndpoint.Publish(new ExpenseRejectedEvent
+        await publishEndpoint.Publish(new ExpenseRejectedEvent
         {
             ExpenseId = expense.Id,
             TenantId = expense.TenantId,
@@ -51,8 +39,8 @@ public class RejectExpenseRequestCommandHandler : IRequestHandler<RejectExpenseR
             Reason = request.Note
         }, cancellationToken);
         
-        await _repository.UpdateAsync(expense, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.UpdateAsync(expense, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;
     }

@@ -27,6 +27,7 @@ namespace Expense.Infrastructure.Persistence.Configurations
             builder.HasMany(er => er.Approvals)
                 .WithOne(a => a.ExpenseRequest)
                 .HasForeignKey(a => a.ExpenseRequestId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

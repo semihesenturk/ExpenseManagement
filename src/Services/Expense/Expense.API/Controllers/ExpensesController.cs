@@ -12,28 +12,21 @@ namespace Expense.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class ExpensesController : ControllerBase
+public class ExpensesController(IMediator mediator) : ControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public ExpensesController(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
-
     /// <summary>
     /// Yeni harcama talebi oluşturur.
     /// </summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateExpenseRequestCommand command)
-        => Ok(await _mediator.Send(command));
+        => Ok(await mediator.Send(command));
 
     /// <summary>
     /// Harcamaları listeler.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] GetExpenseRequestsQuery query)
-        => Ok(await _mediator.Send(query));
+        => Ok(await mediator.Send(query));
 
     /// <summary>
     /// Tekil harcama detayı getirir.
@@ -41,7 +34,7 @@ public class ExpensesController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
-        var result = await _mediator.Send(new GetExpenseRequestByIdQuery { Id = id });
+        var result = await mediator.Send(new GetExpenseRequestByIdQuery { Id = id });
         return result != null ? Ok(result) : NotFound("Harcama bulunamadı veya bu veriye erişim yetkiniz yok.");
     }
 
@@ -53,7 +46,7 @@ public class ExpensesController : ControllerBase
     public async Task<IActionResult> Approve(Guid id, [FromBody] string? note)
     {
         var command = new ApproveExpenseRequestCommand(id, note);
-        return Ok(await _mediator.Send(command));
+        return Ok(await mediator.Send(command));
     }
 
     /// <summary>
@@ -64,6 +57,6 @@ public class ExpensesController : ControllerBase
     public async Task<IActionResult> Reject(Guid id, [FromBody] string? note)
     {
         var command = new RejectExpenseRequestCommand(id, note);
-        return Ok(await _mediator.Send(command));
+        return Ok(await mediator.Send(command));
     }
 }

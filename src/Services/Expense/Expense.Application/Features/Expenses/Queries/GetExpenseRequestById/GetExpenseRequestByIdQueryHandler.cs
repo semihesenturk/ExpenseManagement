@@ -4,24 +4,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Expense.Application.Features.Expenses.Queries.GetExpenseRequestById;
 
-public class GetExpenseRequestByIdQueryHandler : IRequestHandler<GetExpenseRequestByIdQuery, GetExpenseRequestByIdDto?>
+public class GetExpenseRequestByIdQueryHandler(IExpenseDbContext context, ICurrentUserService currentUser)
+    : IRequestHandler<GetExpenseRequestByIdQuery, GetExpenseRequestByIdDto?>
 {
-    private readonly IExpenseDbContext _context;
-    private readonly ICurrentUserService _currentUser;
-
-    public GetExpenseRequestByIdQueryHandler(IExpenseDbContext context, ICurrentUserService currentUser)
-    {
-        _context = context;
-        _currentUser = currentUser;
-    }
-
     public async Task<GetExpenseRequestByIdDto?> Handle(GetExpenseRequestByIdQuery request,
         CancellationToken cancellationToken)
     {
-        var tenantId = _currentUser.TenantId;
+        var tenantId = currentUser.TenantId;
         if (!tenantId.HasValue) return null;
         
-        var result = await _context.ExpenseRequests
+        var result = await context.ExpenseRequests
             .AsNoTracking()
             .Where(x => x.Id == request.Id && x.TenantId == tenantId.Value)
             .Select(x => new

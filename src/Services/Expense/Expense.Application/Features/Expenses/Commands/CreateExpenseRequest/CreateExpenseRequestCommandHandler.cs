@@ -6,29 +6,17 @@ using MediatR;
 
 namespace Expense.Application.Features.Expenses.Commands.CreateExpenseRequest;
 
-public class CreateExpenseRequestCommandHandler : IRequestHandler<CreateExpenseRequestCommand, CreateExpenseRequestDto>
+public class CreateExpenseRequestCommandHandler(
+    IExpenseDbContext context,
+    IUnitOfWork unitOfWork,
+    ICurrentUserService currentUserService,
+    IPublishEndpoint publishEndpoint)
+    : IRequestHandler<CreateExpenseRequestCommand, CreateExpenseRequestDto>
 {
-    private readonly IExpenseDbContext _context;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly IPublishEndpoint _publishEndpoint;
-
-    public CreateExpenseRequestCommandHandler(
-        IExpenseDbContext context, 
-        IUnitOfWork unitOfWork,
-        ICurrentUserService currentUserService,
-        IPublishEndpoint publishEndpoint)
-    {
-        _context = context;
-        _unitOfWork = unitOfWork;
-        _currentUserService = currentUserService;
-        _publishEndpoint = publishEndpoint;
-    }
-
     public async Task<CreateExpenseRequestDto> Handle(CreateExpenseRequestCommand request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId;
-        var tenantId = _currentUserService.TenantId;
+        var userId = currentUserService.UserId;
+        var tenantId = currentUserService.TenantId;
 
         if (!userId.HasValue || !tenantId.HasValue)
             throw new UnauthorizedAccessException("Kullanıcı veya Tenant bilgisi bulunamadı.");
@@ -43,9 +31,9 @@ public class CreateExpenseRequestCommandHandler : IRequestHandler<CreateExpenseR
             request.Currency
         );
         
-        _context.ExpenseRequests.Add(entity);
+        context.ExpenseRequests.Add(entity);
         
-        await _publishEndpoint.Publish(new ExpenseCreatedEvent
+        await publishEndpoint.Publish(new ExpenseCreatedEvent
         {
             ExpenseId = entity.Id,
             TenantId = tenantId.Value,
@@ -53,7 +41,7 @@ public class CreateExpenseRequestCommandHandler : IRequestHandler<CreateExpenseR
             Amount = entity.Amount
         }, cancellationToken);
         
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
         
         return new CreateExpenseRequestDto
         {

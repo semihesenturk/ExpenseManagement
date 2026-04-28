@@ -4,16 +4,11 @@ using System.Diagnostics;
 
 namespace Expense.Application.Behaviors;
 
-public class PerformanceBehavior<TRequest, TResponse> 
-    : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
+public class PerformanceBehavior<TRequest, TResponse>(ILogger<PerformanceBehavior<TRequest, TResponse>> logger)
+    : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
 {
-    private readonly ILogger<PerformanceBehavior<TRequest, TResponse>> _logger;
     private readonly Stopwatch _timer = new();
-
-    public PerformanceBehavior(ILogger<PerformanceBehavior<TRequest, TResponse>> logger)
-    {
-        _logger = logger;
-    }
 
     public async Task<TResponse> Handle(
         TRequest request,
@@ -28,9 +23,9 @@ public class PerformanceBehavior<TRequest, TResponse>
 
         var elapsed = _timer.ElapsedMilliseconds;
 
-        if (elapsed > 500) // 0.5 saniyeden uzun işlemleri uyarı olarak logla
+        if (elapsed > 500)
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 "Long running request: {RequestName} took {Elapsed}ms.",
                 typeof(TRequest).Name, elapsed);
         }

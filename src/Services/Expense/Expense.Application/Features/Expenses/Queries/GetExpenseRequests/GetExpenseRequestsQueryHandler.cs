@@ -5,22 +5,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Expense.Application.Features.Expenses.Queries.GetExpenseRequests;
 
-public class GetExpenseRequestsQueryHandler : IRequestHandler<GetExpenseRequestsQuery, PaginatedList<GetExpenseRequestsDto>>
+public class GetExpenseRequestsQueryHandler(IExpenseDbContext context, ICurrentUserService currentUser)
+    : IRequestHandler<GetExpenseRequestsQuery, PaginatedList<GetExpenseRequestsDto>>
 {
-    private readonly IExpenseDbContext _context; 
-    private readonly ICurrentUserService _currentUser;
-
-    public GetExpenseRequestsQueryHandler(IExpenseDbContext context, ICurrentUserService currentUser)
-    {
-        _context = context;
-        _currentUser = currentUser;
-    }
-
     public async Task<PaginatedList<GetExpenseRequestsDto>> Handle(GetExpenseRequestsQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.ExpenseRequests.AsNoTracking();
+        var query = context.ExpenseRequests.AsNoTracking();
         
-        var userRoles = _currentUser.Roles ?? [];
+        var userRoles = currentUser.Roles ?? [];
         
         var hasManagerialRole = userRoles.Contains("HR") || 
                                 userRoles.Contains("Admin") || 
@@ -28,7 +20,7 @@ public class GetExpenseRequestsQueryHandler : IRequestHandler<GetExpenseRequests
 
         if (!hasManagerialRole)
         {
-            query = query.Where(x => x.RequestedById == _currentUser.UserId);
+            query = query.Where(x => x.RequestedById == currentUser.UserId);
         }
         
         if (request.Status.HasValue)

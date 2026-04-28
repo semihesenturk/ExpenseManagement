@@ -1,5 +1,3 @@
-using Expense.Domain.Enums;
-
 namespace Expense.Application.Features.Expenses.Commands.CreateExpenseRequest;
 
 public class CreateExpenseRequestDto

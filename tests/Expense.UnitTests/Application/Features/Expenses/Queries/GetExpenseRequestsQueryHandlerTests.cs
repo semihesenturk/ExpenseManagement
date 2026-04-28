@@ -1,114 +1,152 @@
-// using Expense.Application.Common.Interfaces;
-// using Expense.Application.Features.Expenses.Queries.GetExpenseRequests;
-// using Expense.Domain.Entities;
-// using FluentAssertions;
-// using Moq;
-// using Moq.EntityFrameworkCore;
-//
-// namespace Expense.UnitTests.Application.Features.Expenses.Queries;
-//
-// public class GetExpenseRequestsQueryHandlerTests
-// {
-//     private readonly Mock<IExpenseDbContext> _contextMock;
-//     private readonly Mock<ICurrentUserService> _currentUserServiceMock;
-//     private readonly GetExpenseRequestsQueryHandler _handler;
-//
-//     public GetExpenseRequestsQueryHandlerTests()
-//     {
-//         _contextMock = new Mock<IExpenseDbContext>();
-//         _currentUserServiceMock = new Mock<ICurrentUserService>();
-//         _handler = new GetExpenseRequestsQueryHandler(_contextMock.Object, _currentUserServiceMock.Object);
-//     }
-//
-//     [Fact]
-//     public async Task Handle_WhenUserIsEmployee_ShouldReturnOnlyOwnExpenses()
-//     {
-//         // Arrange: Kullanıcı düz çalışan (Employee). Sadece kendi 1 harcamasını görmeli.
-//         var tenantId = Guid.NewGuid();
-//         var myUserId = Guid.NewGuid();
-//         var otherUserId = Guid.NewGuid();
-//
-//         var expenses = new List<ExpenseRequest>
-//         {
-//             new ExpenseRequest(tenantId, myUserId, 1000, "Benim Harcamam"),
-//             new ExpenseRequest(tenantId, otherUserId, 5000, "Başkasının Harcaması")
-//         };
-//
-//         _contextMock.Setup(x => x.ExpenseRequests).ReturnsDbSet(expenses);
-//         
-//         _currentUserServiceMock.Setup(x => x.TenantId).Returns(tenantId);
-//         _currentUserServiceMock.Setup(x => x.UserId).Returns(myUserId);
-//         _currentUserServiceMock.Setup(x => x.Roles).Returns(new List<string> { "Employee" });
-//
-//         var query = new GetExpenseRequestsQuery { PageNumber = 1, PageSize = 10 };
-//
-//         // Act
-//         var result = await _handler.Handle(query, CancellationToken.None);
-//
-//         // Assert
-//         result.Should().NotBeNull();
-//         result.TotalCount.Should().Be(1); // Sadece kendi harcamasını saymalı
-//         result.Items.First().Description.Should().Be("Benim Harcamam");
-//     }
-//
-//     [Fact]
-//     public async Task Handle_WhenUserIsApprover_ShouldReturnAllExpensesInTenant()
-//     {
-//         // Arrange: Kullanıcı Approver. Kendi tenant'ındaki herkesin harcamasını (2 adet) görmeli.
-//         var tenantId = Guid.NewGuid();
-//         var myUserId = Guid.NewGuid();
-//         var otherUserId = Guid.NewGuid();
-//
-//         var expenses = new List<ExpenseRequest>
-//         {
-//             new ExpenseRequest(tenantId, myUserId, 1000, "Benim Harcamam"),
-//             new ExpenseRequest(tenantId, otherUserId, 5000, "Başkasının Harcaması")
-//         };
-//
-//         _contextMock.Setup(x => x.ExpenseRequests).ReturnsDbSet(expenses);
-//         
-//         _currentUserServiceMock.Setup(x => x.TenantId).Returns(tenantId);
-//         _currentUserServiceMock.Setup(x => x.UserId).Returns(myUserId);
-//         _currentUserServiceMock.Setup(x => x.Roles).Returns(new List<string> { "Approver" }); // Yetkili Rol
-//
-//         var query = new GetExpenseRequestsQuery { PageNumber = 1, PageSize = 10 };
-//
-//         // Act
-//         var result = await _handler.Handle(query, CancellationToken.None);
-//
-//         // Assert
-//         result.Should().NotBeNull();
-//         result.TotalCount.Should().Be(2); // Yetkili olduğu için her ikisini de görmeli
-//     }
-//
-//     [Fact]
-//     public async Task Handle_WithPagination_ShouldReturnCorrectPageSize()
-//     {
-//         // Arrange: Sayfalama (Pagination) test ediliyor. Toplam 3 kayıt var ama 2'si isteniyor.
-//         var tenantId = Guid.NewGuid();
-//         var userId = Guid.NewGuid();
-//
-//         var expenses = new List<ExpenseRequest>
-//         {
-//             new ExpenseRequest(tenantId, userId, 100, "Harcama 1"),
-//             new ExpenseRequest(tenantId, userId, 200, "Harcama 2"),
-//             new ExpenseRequest(tenantId, userId, 300, "Harcama 3")
-//         };
-//
-//         _contextMock.Setup(x => x.ExpenseRequests).ReturnsDbSet(expenses);
-//         
-//         _currentUserServiceMock.Setup(x => x.TenantId).Returns(tenantId);
-//         _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
-//         _currentUserServiceMock.Setup(x => x.Roles).Returns(new List<string> { "HR" });
-//
-//         var query = new GetExpenseRequestsQuery { PageNumber = 1, PageSize = 2 }; // Sadece ilk 2'sini getir
-//
-//         // Act
-//         var result = await _handler.Handle(query, CancellationToken.None);
-//
-//         // Assert
-//         result.Should().NotBeNull();
-//         result.TotalCount.Should().Be(3); // Toplam veri sayısı 3
-//         result.Items.Count.Should().Be(2); // Ama dönen liste (sayfa) 2 elemanlı olmalı
-//     }
-// }
+using Expense.Application.Common.Interfaces;
+using Expense.Application.Features.Expenses.Queries.GetExpenseRequests;
+using Expense.Domain.Entities;
+using Expense.Domain.Enums;
+using FluentAssertions;
+using Moq;
+using Moq.EntityFrameworkCore;
+
+namespace Expense.UnitTests.Application.Features.Expenses.Queries;
+
+public class GetExpenseRequestsQueryHandlerTests
+{
+    private readonly Mock<IExpenseDbContext> _contextMock;
+    private readonly Mock<ICurrentUserService> _currentUserServiceMock;
+    private readonly GetExpenseRequestsQueryHandler _handler;
+
+    public GetExpenseRequestsQueryHandlerTests()
+    {
+        _contextMock = new Mock<IExpenseDbContext>();
+        _currentUserServiceMock = new Mock<ICurrentUserService>();
+        _handler = new GetExpenseRequestsQueryHandler(
+            _contextMock.Object,
+            _currentUserServiceMock.Object);
+    }
+
+    private static ExpenseRequest CreateExpense(Guid tenantId, Guid userId, decimal amount = 1000m)
+        => new ExpenseRequest(tenantId, userId, amount,
+            "Yirmi karakterden uzun açıklama",
+            ExpenseCategory.Travel, Currency.TRY);
+
+    [Fact]
+    public async Task Handle_WhenUserIsEmployee_ShouldReturnOnlyOwnExpenses()
+    {
+        // Arrange — Employee sadece kendi harcamasını görmeli
+        var tenantId = Guid.NewGuid();
+        var myUserId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+
+        var expenses = new List<ExpenseRequest>
+        {
+            CreateExpense(tenantId, myUserId, 1000m),
+            CreateExpense(tenantId, otherUserId, 5000m)
+        };
+
+        _contextMock.Setup(x => x.ExpenseRequests).ReturnsDbSet(expenses);
+        _currentUserServiceMock.Setup(x => x.TenantId).Returns(tenantId);
+        _currentUserServiceMock.Setup(x => x.UserId).Returns(myUserId);
+        _currentUserServiceMock.Setup(x => x.Roles).Returns(new List<string> { "Employee" });
+
+        var query = new GetExpenseRequestsQuery { PageNumber = 1, PageSize = 10 };
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.TotalCount.Should().Be(1);
+        result.Items.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task Handle_WhenUserIsHR_ShouldReturnAllExpensesInTenant()
+    {
+        // Arrange — HR tüm tenant harcamalarını görmeli
+        var tenantId = Guid.NewGuid();
+        var myUserId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+
+        var expenses = new List<ExpenseRequest>
+        {
+            CreateExpense(tenantId, myUserId, 1000m),
+            CreateExpense(tenantId, otherUserId, 5000m)
+        };
+
+        _contextMock.Setup(x => x.ExpenseRequests).ReturnsDbSet(expenses);
+        _currentUserServiceMock.Setup(x => x.TenantId).Returns(tenantId);
+        _currentUserServiceMock.Setup(x => x.UserId).Returns(myUserId);
+        _currentUserServiceMock.Setup(x => x.Roles).Returns(new List<string> { "HR" });
+
+        var query = new GetExpenseRequestsQuery { PageNumber = 1, PageSize = 10 };
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.TotalCount.Should().Be(2);
+        result.Items.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Handle_WithPagination_ShouldReturnCorrectPage()
+    {
+        // Arrange — 3 kayıt var, 2'si isteniyor
+        var tenantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var expenses = new List<ExpenseRequest>
+        {
+            CreateExpense(tenantId, userId, 100m),
+            CreateExpense(tenantId, userId, 200m),
+            CreateExpense(tenantId, userId, 300m)
+        };
+
+        _contextMock.Setup(x => x.ExpenseRequests).ReturnsDbSet(expenses);
+        _currentUserServiceMock.Setup(x => x.TenantId).Returns(tenantId);
+        _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
+        _currentUserServiceMock.Setup(x => x.Roles).Returns(new List<string> { "HR" });
+
+        var query = new GetExpenseRequestsQuery { PageNumber = 1, PageSize = 2 };
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.TotalCount.Should().Be(3);
+        result.Items.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Handle_WithStatusFilter_ShouldReturnOnlyMatchingExpenses()
+    {
+        // Arrange — sadece Pending olanlar filtrelenmeli
+        var tenantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var pending = CreateExpense(tenantId, userId, 1000m);
+        var approved = CreateExpense(tenantId, userId, 2000m);
+        approved.Approve(Guid.NewGuid());
+
+        var expenses = new List<ExpenseRequest> { pending, approved };
+
+        _contextMock.Setup(x => x.ExpenseRequests).ReturnsDbSet(expenses);
+        _currentUserServiceMock.Setup(x => x.TenantId).Returns(tenantId);
+        _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
+        _currentUserServiceMock.Setup(x => x.Roles).Returns(new List<string> { "HR" });
+
+        var query = new GetExpenseRequestsQuery
+        {
+            PageNumber = 1,
+            PageSize = 10,
+            Status = ExpenseStatus.Pending
+        };
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.TotalCount.Should().Be(1);
+        result.Items.First().Status.Should().Be("Pending");
+    }
+}

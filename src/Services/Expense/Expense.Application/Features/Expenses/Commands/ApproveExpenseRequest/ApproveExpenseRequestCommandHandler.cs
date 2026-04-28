@@ -7,32 +7,20 @@ using Shared.Contracts.Events;
 
 namespace Expense.Application.Features.Expenses.Commands.ApproveExpenseRequest;
 
-public class ApproveExpenseRequestCommandHandler : IRequestHandler<ApproveExpenseRequestCommand, Unit>
+public class ApproveExpenseRequestCommandHandler(
+    IExpenseRequestRepository repository,
+    IUnitOfWork unitOfWork,
+    ICurrentUserService currentUser,
+    IPublishEndpoint publishEndpoint)
+    : IRequestHandler<ApproveExpenseRequestCommand, Unit>
 {
-    private readonly IExpenseRequestRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ICurrentUserService _currentUser;
-    private readonly IPublishEndpoint _publishEndpoint;
-
-    public ApproveExpenseRequestCommandHandler(
-        IExpenseRequestRepository repository,
-        IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser,
-        IPublishEndpoint publishEndpoint)
-    {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _currentUser = currentUser;
-        _publishEndpoint = publishEndpoint;
-    }
-
     public async Task<Unit> Handle(ApproveExpenseRequestCommand request, CancellationToken cancellationToken)
     {
-        var currentUserId = _currentUser.UserId ?? throw new UnauthorizedAccessException("Kullanıcı kimliği bulunamadı.");
-        var currentTenantId = _currentUser.TenantId;
-        var userRoles = _currentUser.Roles ?? [];
+        var currentUserId = currentUser.UserId ?? throw new UnauthorizedAccessException("Kullanıcı kimliği bulunamadı.");
+        var currentTenantId = currentUser.TenantId;
+        var userRoles = currentUser.Roles ?? [];
         
-        var expense = await _repository.GetByIdAsync(request.ExpenseRequestId, cancellationToken)
+        var expense = await repository.GetByIdAsync(request.ExpenseRequestId, cancellationToken)
             ?? throw new KeyNotFoundException("Harcama bulunamadı.");
         
         if (expense.TenantId != currentTenantId)
@@ -65,7 +53,7 @@ public class ApproveExpenseRequestCommandHandler : IRequestHandler<ApproveExpens
         
         if (expense.Status == ExpenseStatus.Approved)
         {
-            await _publishEndpoint.Publish(new ExpenseApprovedEvent
+            await publishEndpoint.Publish(new ExpenseApprovedEvent
             {
                 ExpenseId = expense.Id,
                 TenantId = expense.TenantId,
@@ -73,8 +61,8 @@ public class ApproveExpenseRequestCommandHandler : IRequestHandler<ApproveExpens
             }, cancellationToken);
         }
         
-        await _repository.UpdateAsync(expense, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.UpdateAsync(expense, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;
     }
