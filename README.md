@@ -30,6 +30,7 @@ Cloud-based SaaS modelinde çalışan, multi-tenant destekli kurumsal harcama on
           │    Notification Service     │  :5051
           │    MassTransit Consumers    │
           │    Mock bildirim gönderici  │
+          │    Auto Token (Startup)     │
           └─────────────────────────────┘
 
 Veritabanları:
@@ -78,6 +79,8 @@ dotnet run
 
 > Swagger: http://localhost:5051/swagger
 
+> **Not:** Notification Service ayağa kalkarken Expense API'ye login isteği atarak otomatik token alır. Expense Service'in önce başlatılmış olması gerekir. Token alınamazsa servis kimliksiz çalışmaya devam eder ve konsola uyarı yazar.
+
 ---
 
 ## 👥 Test Kullanıcıları
@@ -114,7 +117,7 @@ Personel → Talep Oluştur → HR Onaylar → PendingAdminApproval → Admin On
 
 ### Red Durumu
 ```
-Personel → Talep Oluştur → HR veya Admin Reddeder → ❌ Rejected
+Personel → Talep Oluştur → HR veya Admin Reddeder (min. 10 karakter red notu) → ❌ Rejected
 ```
 
 ---
@@ -141,6 +144,8 @@ Personel → Talep Oluştur → HR veya Admin Reddeder → ❌ Rejected
 GET /api/Expenses?pageNumber=1&pageSize=10&status=2&startDate=2026-01-01&endDate=2026-12-31
 ```
 
+**Status değerleri:** `1=Pending`, `2=Approved`, `3=Rejected`, `4=PendingAdminApproval`
+
 ---
 
 ## 🔧 Teknik Özellikler
@@ -156,24 +161,31 @@ GET /api/Expenses?pageNumber=1&pageSize=10&status=2&startDate=2026-01-01&endDate
 | Onion Architecture | ✅ | Domain / Application / Infrastructure / API |
 | Repository + Unit of Work | ✅ | Generic repository, UoW ile transaction yönetimi |
 | RabbitMQ (Async) | ✅ | MassTransit, ExpenseCreated/Approved/Rejected events |
-| HTTP Servisler Arası (Sync) | ✅ | Notification → Expense API, Polly retry |
+| HTTP Servisler Arası (Sync) | ✅ | Notification → Expense API, Polly retry (3 deneme) |
 | Validasyon | ✅ | FluentValidation, pipeline behavior |
 | EF Core + Code First | ✅ | PostgreSQL, migrations, global filters |
 | JWT Authentication | ✅ | UserId + TenantId + Roles claims |
-| Outbox Pattern | ✅ | MassTransit EF Core Outbox |
-| Unit Testing | ✅ | xUnit + Moq |
-| Docker Support | ✅ | docker-compose.yml |
-| Swagger / OpenAPI | ✅ | JWT destekli |
+| Outbox Pattern | ✅ | MassTransit EF Core Outbox (atomik mesaj + DB işlemi) |
+| Unit Testing | ✅ | xUnit + Moq + FluentAssertions |
+| Integration Testing | ✅ | WebApplicationFactory + InMemory DB |
+| Docker Support | ✅ | docker-compose.yml (altyapı servisleri) |
+| Swagger / OpenAPI | ✅ | JWT destekli, tüm endpoint'ler dokümanlı |
+| AutoMapper | ✅ | Entity → DTO dönüşümleri |
+| Pipeline Behaviors | ✅ | Authorization, Validation, Logging, Performance |
 
 ### Mimari Kararlar
 
-**Multi-Tenancy:** Her kullanıcı login olduğunda JWT token'ına `TenantId` claim'i eklenir. EF Core global query filter bu claim'i okuyarak tüm sorgulara otomatik `WHERE TenantId = @current` ekler. Tek satır bile yazmadan tam izolasyon sağlanır.
+**Multi-Tenancy:** Her kullanıcı login olduğunda JWT token'ına `TenantId` claim'i eklenir. EF Core global query filter bu claim'i okuyarak tüm sorgulara otomatik `WHERE TenantId = @current` ekler. `User`, `ExpenseRequest` ve `Approval` entity'lerinin tamamı bu filtreye tabidir. Tek satır kod yazmadan tam izolasyon sağlanır.
 
-**Outbox Pattern:** MassTransit'in EF Core Outbox entegrasyonu kullanılmıştır. Bu sayede veritabanı kaydı ve mesaj yayınlama aynı transaction içinde atomik olarak gerçekleşir. RabbitMQ geçici olarak çevrimdışı olsa bile mesajlar kaybolmaz.
+**Outbox Pattern:** MassTransit'in EF Core Outbox entegrasyonu kullanılmıştır. Bu sayede veritabanı kaydı ve mesaj yayınlama aynı transaction içinde atomik olarak gerçekleşir. RabbitMQ geçici olarak çevrimdışı olsa bile mesajlar kaybolmaz, servis tekrar ayağa kalktığında iletilir.
 
-**Onay Akışı:** 5.000 TL eşiği domain katmanında `ExpenseRequest` entity'si üzerinde yönetilir. `SendToAdminApproval()` metodu ile durum `PendingAdminApproval`'a geçer, ardından Admin onayı ile `Approved` olur.
+**Onay Akışı:** 5.000 TL eşiği domain katmanında `ExpenseRequest` entity'si üzerinde yönetilir. `SendToAdminApproval()` domain metodu ile durum `PendingAdminApproval`'a geçer, ardından Admin onayı ile `Approved` olur. İş kuralları domain içinde kapsüllüdür.
 
-**Service-to-Service Auth:** Notification Service, Expense API'ye HTTP çağrısı yaparken `TestToken` konfigürasyonunu kullanır. Production ortamında OAuth2 Client Credentials flow veya internal API key mekanizması kullanılmalıdır.
+**Pipeline Behaviors:** MediatR pipeline'ına 4 behavior eklenmiştir. Sırasıyla: `AuthorizationBehavior` (kullanıcı kimlik kontrolü) → `ValidationBehavior` (FluentValidation) → `LoggingBehavior` (request/response loglama) → `PerformanceBehavior` (500ms üzeri sorgular için uyarı).
+
+**Service-to-Service Auth:** Notification Service, ayağa kalkarken Expense API'ye login isteği atarak JWT token alır ve bunu singleton olarak saklar. Bu token, Expense API'ye yapılan tüm HTTP çağrılarında kullanılır. Production ortamında OAuth2 Client Credentials flow tercih edilmelidir.
+
+**Soft Delete:** Tüm entity'lerde `IsDeleted`, `DeletedAt`, `DeletedBy` alanları mevcuttur. EF Core global filter ile silinmiş kayıtlar otomatik olarak sorgulardan dışlanır. Fiziksel silme hiçbir şekilde yapılmaz.
 
 ---
 
@@ -185,27 +197,36 @@ ExpenseManagement/
 │   └── docker-compose.yml
 ├── src/
 │   ├── Shared/
-│   │   ├── Shared.Contracts/         # Servisler arası event'ler
+│   │   ├── Shared.Contracts/              # Servisler arası event modelleri
 │   │   └── Shared.Kernel/
 │   └── Services/
 │       ├── Expense/
-│       │   ├── Expense.API/          # Controllers, Program.cs
-│       │   ├── Expense.Application/  # CQRS, Handlers, Validators
-│       │   ├── Expense.Domain/       # Entities, Enums, AggregateRoot
-│       │   └── Expense.Infrastructure/ # EF Core, Repositories, MassTransit
+│       │   ├── Expense.API/               # Controllers, Program.cs, Middleware
+│       │   ├── Expense.Application/       # CQRS, Handlers, Validators, Behaviors
+│       │   ├── Expense.Domain/            # Entities, Enums, AggregateRoot
+│       │   └── Expense.Infrastructure/    # EF Core, Repositories, UoW, MassTransit
 │       └── Notification/
-│           └── ExpenseManagement.NotificationAPI/ # Consumers, HTTP Client
+│           └── ExpenseManagement.NotificationAPI/  # Consumers, HTTP Client, Token
 └── tests/
-    ├── Expense.UnitTests/
-    └── Expense.IntegrationTests/
+    ├── Expense.UnitTests/                 # xUnit + Moq handler ve domain testleri
+    └── Expense.IntegrationTests/          # WebApplicationFactory controller testleri
 ```
 
 ---
 
-## 🧪 Test
+## 🧪 Testleri Çalıştırma
+
+### Unit Testler
 
 ```bash
 cd tests/Expense.UnitTests
+dotnet test
+```
+
+### Integration Testler
+
+```bash
+cd tests/Expense.IntegrationTests
 dotnet test
 ```
 
@@ -224,6 +245,9 @@ dotnet test
     "SecretKey": "IzometriBilisimIcinCokGizliVeUzunBirAnahtarKelime123!!",
     "Issuer": "ExpenseAPI",
     "Audience": "ExpenseAPI"
+  },
+  "RabbitMq": {
+    "Host": "localhost"
   }
 }
 ```
@@ -232,6 +256,14 @@ dotnet test
 
 ```json
 {
-  "TestToken": "buraya_expense_api_token_girilmeli"
+  "RabbitMq": {
+    "Host": "localhost"
+  },
+  "ExpenseApi": {
+    "BaseUrl": "http://localhost:5130",
+    "ServiceAccountEmail": "employee@izometri.local"
+  }
 }
 ```
+
+Notification Service başlarken `ServiceAccountEmail` ile Expense API'ye login atar ve token'ı otomatik alır. Manuel token girişi gerekmez.

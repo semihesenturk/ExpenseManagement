@@ -1,9 +1,7 @@
 using System.Text;
 using Expense.Application;
-using Expense.Application.Common.Interfaces;
 using Expense.Infrastructure;
 using Expense.Infrastructure.Persistence.SeedData;
-using Expense.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -16,9 +14,6 @@ if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddInfrastructure(builder.Configuration);
 }
-
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
